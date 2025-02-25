@@ -10,9 +10,10 @@ const server = new Server(
     },
     {
         capabilities: {
+            prompts: {}, // <-- Add prompts
             resources: {},
         },
-    }
+    },
 );
 
 setupHandlers(server);
