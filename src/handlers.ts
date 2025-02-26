@@ -1,18 +1,21 @@
 // src/handlers.ts
 import {
+    CallToolRequestSchema, // <-- Add this
     GetPromptRequestSchema,
     ListPromptsRequestSchema,
     ListResourcesRequestSchema,
     ListResourceTemplatesRequestSchema,
+    ListToolsRequestSchema, // <-- and this
     ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { type Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { resourceHandlers, resources } from "./resources.js";
 import {
     getResourceTemplate,
     resourceTemplates,
 } from "./resource-templates.js";
 import { promptHandlers, prompts } from "./prompts.js";
+import { toolHandlers, tools } from "./tools.js"; // <-- import our tools
+import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 
 export const setupHandlers = (server: Server): void => {
     // List available resources when clients request them
@@ -44,6 +47,22 @@ export const setupHandlers = (server: Server): void => {
         const promptHandler = promptHandlers[name as keyof typeof promptHandlers];
         if (promptHandler) return promptHandler(args as { name: string, style?: string });
         throw new Error("Prompt not found");
+    });
+
+    // Tools
+    server.setRequestHandler(ListToolsRequestSchema, async () => ({
+        tools: Object.values(tools),
+    }));
+
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
+        type ToolHandlerKey = keyof typeof toolHandlers;
+        const { name, arguments: params } = request.params ?? {};
+        const handler = toolHandlers[name as ToolHandlerKey];
+
+        if (!handler) throw new Error("Tool not found");
+
+        type HandlerParams = Parameters<typeof handler>;
+        return handler(...[params] as HandlerParams);
     });
 
 };
